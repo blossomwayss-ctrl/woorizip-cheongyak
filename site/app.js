@@ -139,7 +139,7 @@ function banners() {
   const pm = profile().members || [];
   const incomplete = pm.some((m) => !m.account?.openedAt || !m.monthlyIncome || !m.birth);
   if (!S.bundle.profileMissing && incomplete && S.tab !== 'me') out.push(`<div class="banner warn"><b>청약통장·소득·생년월일</b>이 비어 있는 항목이 있어요. <a href="#" data-goto-me>우리정보</a>에서 채우면 판정이 정확해져요.</div>`);
-  if (S.bundle.profileMissing && !localStorage.getItem(LS.prof)) out.push(`<div class="banner warn"><b>우리 부부 정보가 아직 예시값이에요.</b> 우리정보 탭에서 청약통장·소득을 입력하면 판정이 정확해져요.</div>`);
+  if (S.bundle.profileMissing && !localStorage.getItem(LS.prof)) out.push(`<div class="banner warn"><b>우리 부부 정보가 아직 비어 있어요.</b> 그래서 지금은 전부 '조건 확인'으로 보여요. 우리정보 탭에서 청약통장·소득을 입력하면 가능성이 계산돼요.</div>`);
   if (S.sim) out.push(`<div class="banner" style="background:var(--after-bg);color:var(--after);border-color:#f0cdbb">💍 <b>혼인신고 했다고 가정</b>하고 보는 중이에요. <a href="#" data-sim-off>원래대로</a></div>`);
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;

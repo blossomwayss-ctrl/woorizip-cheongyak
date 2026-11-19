@@ -57,7 +57,7 @@ $('#lockForm').addEventListener('submit', async (e) => {
     $('#pw').value = '';
     showApp();
   } catch {
-    $('#lockMsg').textContent = '비밀번호가 맞지 않아요.';
+    $('#lockMsg').textContent = '비밀번호가 맞지 않아요. (방금 비밀번호를 바꿨다면 2~3분 뒤 다시 시도해 주세요)';
   } finally { btn.disabled = false; btn.textContent = '열기'; }
 });
 

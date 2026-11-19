@@ -1,0 +1,56 @@
+[
+  {
+    "id": "apt-TEST001-1", "source": "청약홈", "houseManageNo": "TEST001", "pblancNo": "1",
+    "kind": "민영", "kindDetail": "APT · 민영", "name": "[테스트] 광명 하안 OO 아파트", "address": "경기도 광명시 하안동 000", "sido": "경기", "sigungu": "광명시",
+    "totalUnits": 820,
+    "dates": { "notice": "2026-11-14", "specialStart": "2026-11-24", "specialEnd": "2026-11-24", "rank1Local": "2026-11-25", "rank1Gg": "2026-11-25", "rank1Other": "2026-11-26", "applyStart": "2026-11-24", "applyEnd": "2026-11-27", "winners": "2026-12-03", "contractStart": "2026-12-15", "contractEnd": "2026-12-17", "moveIn": "202909" },
+    "flags": { "speculative": true, "adjusted": true, "priceCap": false },
+    "url": "https://www.applyhome.co.kr", "applyUrl": "https://www.applyhome.co.kr/co/coa/selectMainView.do",
+    "models": [
+      { "type": "059.9800A", "area": 59.98, "units": { "general": 40, "special": 60, "newlywed": 18, "firstLife": 15, "newborn": 6 }, "topPrice": 98000 },
+      { "type": "084.9700A", "area": 84.97, "units": { "general": 120, "special": 90, "newlywed": 26, "firstLife": 20, "newborn": 8 }, "topPrice": 132000 }
+    ]
+  },
+  {
+    "id": "apt-TEST002-1", "source": "청약홈", "houseManageNo": "TEST002", "pblancNo": "1",
+    "kind": "신혼희망타운", "kindDetail": "신혼희망타운 · 국민", "name": "[테스트] 시흥 OO 신혼희망타운", "address": "경기도 시흥시 하중동 일원", "sido": "경기", "sigungu": "시흥시",
+    "totalUnits": 640,
+    "dates": { "notice": "2026-11-18", "specialStart": "2026-12-01", "specialEnd": "2026-12-03", "applyStart": "2026-12-01", "applyEnd": "2026-12-03", "winners": "2026-12-11" },
+    "flags": { "speculative": false, "adjusted": false, "priceCap": true, "publicLand": true },
+    "url": "https://apply.lh.or.kr", "applyUrl": "https://apply.lh.or.kr",
+    "models": [ { "type": "055.0000A", "area": 55, "units": { "general": 0, "special": 640 }, "topPrice": 41000 } ]
+  },
+  {
+    "id": "apt-TEST003-1", "source": "청약홈", "houseManageNo": "TEST003", "pblancNo": "1",
+    "kind": "국민", "kindDetail": "APT · 국민 (공공분양)", "name": "[테스트] 부천대장 A-0 공공분양", "address": "경기도 부천시 대장동 일원", "sido": "경기", "sigungu": "부천시",
+    "totalUnits": 900,
+    "dates": { "notice": "2026-11-10", "specialStart": "2026-11-20", "specialEnd": "2026-11-21", "rank1Local": "2026-11-24", "applyStart": "2026-11-20", "applyEnd": "2026-11-25", "winners": "2026-12-02" },
+    "flags": { "speculative": false, "adjusted": false, "priceCap": true, "bigLand": true, "publicLand": true },
+    "url": "https://apply.lh.or.kr", "applyUrl": "https://apply.lh.or.kr",
+    "models": [ { "type": "059.9000A", "area": 59.9, "units": { "general": 120, "special": 300, "newlywed": 120, "firstLife": 100, "newborn": 50 }, "topPrice": 52000 } ]
+  },
+  {
+    "id": "무순위-TEST004-1", "source": "청약홈", "kind": "무순위", "kindDetail": "APT 무순위/잔여세대", "name": "[테스트] 광명 OO 무순위 2세대", "address": "경기도 광명시 광명동 000", "sido": "경기", "sigungu": "광명시",
+    "totalUnits": 2,
+    "dates": { "notice": "2026-11-17", "applyStart": "2026-11-20", "applyEnd": "2026-11-20", "winners": "2026-11-25" },
+    "flags": {}, "url": "https://www.applyhome.co.kr", "applyUrl": "https://www.applyhome.co.kr/co/coa/selectMainView.do", "models": []
+  },
+  {
+    "id": "lh-TEST005", "source": "LH청약플러스", "kind": "행복주택", "kindDetail": "임대주택 · 행복주택", "name": "[테스트] 2026년 경기남부 행복주택 입주자 모집", "address": "경기도", "sido": "경기", "sigungu": "", "status": "공고중",
+    "dates": { "notice": "2026-11-12", "applyEnd": "2026-11-28" }, "flags": {}, "url": "https://apply.lh.or.kr", "applyUrl": "https://apply.lh.or.kr", "models": []
+  },
+  {
+    "id": "pprent-TEST006", "source": "청약홈", "kind": "공공지원민간임대", "kindDetail": "공공지원 민간임대", "name": "[테스트] 안양 OO 공공지원민간임대", "address": "경기도 안양시 만안구 000", "sido": "경기", "sigungu": "안양시",
+    "totalUnits": 300, "dates": { "notice": "2026-11-15", "applyStart": "2026-11-26", "applyEnd": "2026-11-28", "winners": "2026-12-05" },
+    "flags": {}, "url": "https://www.applyhome.co.kr", "applyUrl": "https://www.applyhome.co.kr/co/coa/selectMainView.do", "models": []
+  },
+  {
+    "id": "apt-TEST007-1", "source": "청약홈", "houseManageNo": "TEST007", "pblancNo": "1",
+    "kind": "민영", "kindDetail": "APT · 민영", "name": "[테스트] 서울 구로 OO 자이", "address": "서울특별시 구로구 개봉동 000", "sido": "서울", "sigungu": "구로구",
+    "totalUnits": 450,
+    "dates": { "notice": "2026-11-13", "specialStart": "2026-11-23", "specialEnd": "2026-11-23", "rank1Local": "2026-11-24", "rank1Other": "2026-11-25", "applyStart": "2026-11-23", "applyEnd": "2026-11-26", "winners": "2026-12-02" },
+    "flags": { "speculative": true, "adjusted": true },
+    "url": "https://www.applyhome.co.kr", "applyUrl": "https://www.applyhome.co.kr/co/coa/selectMainView.do",
+    "models": [ { "type": "049.9000A", "area": 49.9, "units": { "general": 30, "special": 40, "newlywed": 12, "firstLife": 10 }, "topPrice": 89000 } ]
+  }
+]

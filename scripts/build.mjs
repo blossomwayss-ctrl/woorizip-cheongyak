@@ -3,7 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluate, deriveProfile, toDate, ymd, todayKST, matchArea, AREAS, DONG_CENTERS } from '../site/engine.js';
+import { evaluate, deriveProfile, toDate, ymd, todayKST, matchArea, AREAS, DONG_CENTERS, BLANK_PROFILE } from '../site/engine.js';
 import { geocodeAll } from './geocode.mjs';
 import { fetchApplyhome, fetchLH } from './sources.mjs';
 import { encryptJSON, decryptJSON } from './crypto.mjs';
@@ -23,7 +23,7 @@ async function readJSON(p, fallback) { try { return JSON.parse(await fs.readFile
 let profile;
 try { profile = env.PROFILE_JSON ? JSON.parse(env.PROFILE_JSON) : null; } catch { console.error('PROFILE_JSON 형식 오류 (JSON 문법 확인)'); process.exit(1); }
 const profileMissing = !profile;
-if (!profile) profile = await readJSON(path.join(ROOT, 'profile.example.json'), {});
+if (!profile) profile = MOCK ? await readJSON(path.join(ROOT, 'profile.example.json'), {}) : structuredClone(BLANK_PROFILE);
 
 const appUrl = env.APP_URL || '';
 const today = todayKST();

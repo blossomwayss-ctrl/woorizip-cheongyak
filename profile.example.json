@@ -3,7 +3,8 @@
   "region": {
     "sido": "경기",
     "sigungu": "광명시",
-    "movedInAt": "2024-01-01"
+    "movedInAt": "2024-01-01",
+    "dong": "예시동"
   },
   "marriage": {
     "weddingDate": "2026-08-01",
@@ -67,11 +68,7 @@
       "영등포",
       "양천"
     ],
-    "nearby": [
-      "철산",
-      "하안",
-      "소하"
-    ],
+    "nearby": [],
     "maxPriceManwon": 0
   }
 }

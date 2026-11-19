@@ -53,7 +53,20 @@ export const DONG_CENTERS = {
   문래동: [37.518, 126.895], 영등포동: [37.516, 126.907], 여의도동: [37.525, 126.925], 당산동: [37.534, 126.9], 신길동: [37.505, 126.914], 대림동: [37.493, 126.9], 도림동: [37.508, 126.901], 양평동: [37.53, 126.89], 양화동: [37.54, 126.89],
   목동: [37.53, 126.875], 신정동: [37.518, 126.856], 신월동: [37.53, 126.835],
 };
-export const HOME_DEFAULT = { lat: 37.4705, lng: 126.873, label: '우리 동네 (철산·하안)' };
+// 지도 🏠 위치: 암호화된 프로필의 region.home(좌표) 또는 region.dong(동 이름)에서만 가져옴 (공개 코드에 집 위치 없음)
+export function homeOf(p) {
+  const r = p?.region || {};
+  if (r.home?.lat) return { label: '우리 동네', ...r.home };
+  const dong = (r.dong || '').replace(/\s/g, '');
+  const key = Object.keys(DONG_CENTERS).find((k) => k.replace(/_.*/, '') === dong || k.replace(/_.*/, '') === `${dong}동`);
+  return key ? { lat: DONG_CENTERS[key][0], lng: DONG_CENTERS[key][1], label: `우리 동네 (${key.replace(/_.*/, '')})` } : null;
+}
+// 부부 정보(PROFILE_JSON)가 아직 없을 때 쓰는 빈 프로필 — 아무것도 단정하지 않도록 숫자는 비워 둠
+export const BLANK_PROFILE = {
+  region: { sido: '경기', sigungu: '' }, marriage: { planned: true, registered: false }, household: { sameHousehold: true },
+  homeless: true, children: [], assets: { realEstate: 0, car: 0 },
+  members: [{ key: 'a', label: '남편', account: {} }, { key: 'b', label: '아내', account: {} }], prefs: {},
+};
 
 // 공고가 관심 지역에 속하는지: 맞으면 지역 key, 서울/경기 광역 임대면 '광역', 아니면 null
 export function matchArea(n, areaKeys) {

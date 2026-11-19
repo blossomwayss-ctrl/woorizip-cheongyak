@@ -1,4 +1,4 @@
-import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES, AREAS, HOME_DEFAULT } from './engine.js';
+import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES, AREAS, homeOf } from './engine.js';
 
 const LS = { key: 'wz.key.v1', prof: 'wz.profileOverride', checks: 'wz.checks', sim: 'wz.simulate' };
 const S = { box: null, bundle: null, tab: 'home', filter: 'all', area: 'all', mapShow: { ok: true, check: true, after: true, no: false }, map: null, showNo: false, sim: localStorage.getItem(LS.sim) === '1', evals: new Map(), d: null, installEvt: null };
@@ -123,7 +123,7 @@ function render() {
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === S.tab));
   $('#banner').innerHTML = banners();
   const v = $('#view');
-  if (S.map) { S.map.remove(); S.map = null; }
+  if (S.map) { try { S.map.stop(); S.map.off(); S.map.remove(); } catch { /* 지도 정리 중 오류 무시 */ } S.map = null; markerLayer = null; }
   v.innerHTML = { home: viewHome, map: viewMap, all: viewAll, cal: viewCal, docs: viewDocs, me: viewMe }[S.tab]();
   window.scrollTo({ top: 0 });
   bindView();
@@ -311,7 +311,8 @@ function viewMe() {
       <fieldset><legend>사는 곳 · 결혼</legend>
         <div class="grid2">
           <label>시·도<select name="sido">${['경기', '서울', '인천'].map((x) => `<option ${p.region?.sido === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-          <label>시·군·구<input name="sigungu" value="${esc(p.region?.sigungu || '')}" placeholder="광명시" /></label>
+          <label>시·군·구<input name="sigungu" value="${esc(p.region?.sigungu || '')}" placeholder="예: 광명시" /></label>
+          <label>사는 동 (지도 🏠)<input name="dong" value="${esc(p.region?.dong || '')}" placeholder="예: 광명동" /></label>
           <label>이 주소 전입일<input type="date" name="movedInAt" value="${esc(p.region?.movedInAt || '')}" /></label>
           <label>결혼식(예정)일<input type="date" name="weddingDate" value="${esc(p.marriage?.weddingDate || '')}" /></label>
         </div>
@@ -360,7 +361,7 @@ function readForm(f) {
   const p = structuredClone(profile());
   const v = (n) => f.elements[n]?.value?.trim() ?? '';
   const c = (n) => !!f.elements[n]?.checked;
-  p.region = { ...(p.region || {}), sido: v('sido'), sigungu: v('sigungu'), movedInAt: v('movedInAt') || null };
+  p.region = { ...(p.region || {}), sido: v('sido'), sigungu: v('sigungu'), dong: v('dong'), movedInAt: v('movedInAt') || null };
   p.marriage = { ...(p.marriage || {}), weddingDate: v('weddingDate') || null, registered: c('registered'), registeredDate: v('registeredDate') || null, planned: true };
   p.household = { ...(p.household || {}), sameHousehold: c('sameHousehold') };
   p.children = v('children').split(',').map((s) => s.trim()).filter(Boolean).map((birth) => ({ birth }));
@@ -504,7 +505,7 @@ function viewMap() {
   return `<div class="map-wrap"><div id="map" aria-label="공고 지도"></div>
       <div class="legend">${['ok', 'check', 'after', 'no'].map((k) => `<label><input type="checkbox" data-mapshow="${k}" ${S.mapShow[k] ? 'checked' : ''}/><span class="dot ${k}"></span>${STATUS[k]} ${counts[k]}</label>`).join('')}</div>
     </div>
-    <p class="map-note">점을 누르면 공고가 보여요. 🏠은 우리 동네${approx ? ` · 옅은 원이 있는 ${approx}건은 정확한 주소 대신 동/구 단위 대략 위치` : ''}</p>
+    <p class="map-note">점을 누르면 공고가 보여요. ${homeOf(profile()) ? '🏠은 우리 동네' : '🏠 위치는 우리정보 탭 "사는 동"에 입력하면 표시돼요'}${approx ? ` · 옅은 원이 있는 ${approx}건은 정확한 주소 대신 동/구 단위 대략 위치` : ''}</p>
     ${section('지도에 있는 공고', list.filter((n) => S.mapShow[E(n).best]), '지금 관심 동네에 표시할 공고가 없어요. 새 공고가 나오면 알려드릴게요.')}
     ${wide.length ? section('지도 밖 광역 공고 (서울·경기 매입·전세임대)', wide, '') : ''}`;
 }
@@ -513,12 +514,13 @@ async function initMap() {
   let L;
   try { L = await loadLeaflet(); } catch { const m = $('#map'); if (m) m.innerHTML = '<div class="empty" style="margin:16px">지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>'; return; }
   const el = $('#map'); if (!el || S.tab !== 'map') return;
-  const home = profile().region?.home || HOME_DEFAULT;
-  S.map = L.map(el, { zoomControl: true, attributionControl: true }).setView([home.lat, home.lng], 12);
+  const home = homeOf(profile());
+  const start = home ? [home.lat, home.lng] : AREAS[0].center;
+  S.map = L.map(el, { zoomControl: true, attributionControl: true }).setView(start, 12);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(S.map);
-  L.marker([home.lat, home.lng], { icon: L.divIcon({ className: '', html: '<div class="home-pin">🏠</div>', iconSize: [24, 24], iconAnchor: [12, 20] }), zIndexOffset: 1000 })
+  if (home) L.marker([home.lat, home.lng], { icon: L.divIcon({ className: '', html: '<div class="home-pin">🏠</div>', iconSize: [24, 24], iconAnchor: [12, 20] }), zIndexOffset: 1000 })
     .addTo(S.map).bindPopup(`<b>${esc(home.label || '우리 동네')}</b>`);
   markerLayer = L.layerGroup().addTo(S.map);
   drawMarkers(true);
@@ -562,9 +564,10 @@ function drawMarkers(fit = false) {
     pts.push([g.lat, g.lng]);
   }
   if (fit) {
-    const home = profile().region?.home || HOME_DEFAULT;
-    const all = [...pts, [home.lat, home.lng]];
-    if (all.length > 1) S.map.fitBounds(all, { padding: [36, 36], maxZoom: 14 });
+    const home = homeOf(profile());
+    const all = home ? [...pts, [home.lat, home.lng]] : pts;
+    if (all.length > 1) S.map.fitBounds(all, { padding: [36, 36], maxZoom: 14, animate: false });
+    else if (all.length === 1) S.map.setView(all[0], 14, { animate: false });
   }
 }
 

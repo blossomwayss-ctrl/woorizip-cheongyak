@@ -88,7 +88,9 @@ export function deriveProfile(p, opts = {}) {
   const incomes = members.map((m) => Number(m.monthlyIncome || 0));
   const hhIncome = incomes.reduce((x, y) => x + y, 0);
   const dual = incomes.filter((x) => x > 0).length >= 2;
+  const incomeKnown = incomes.some((x) => x > 0) || p.incomeConfirmedZero === true;
   return {
+    incomeKnown,
     _derived: true, raw: p, registered, regDate, members, hhIncome, dual,
     sido: normSido(p.region?.sido || '경기'), sigungu: p.region?.sigungu || '',
     homeless: p.homeless !== false && !members.some((m) => m.ownsHome),
@@ -302,6 +304,19 @@ export function evaluate(n, profile, opts = {}) {
   }
 
   if (routes.length === 0) add('other', '자격 확인 필요', 'check', ['유형별 자격을 공고문에서 확인']);
+
+  // 소득을 아직 입력하지 않았으면 소득기준이 걸린 경로는 '조건 확인'으로
+  if (!d.incomeKnown) {
+    for (const r of routes) {
+      if (['newlywed', 'nhw', 'firstLife', 'newborn', 'rent'].includes(r.key) && r.status === 'ok') {
+        r.status = 'check'; r.reasons.push('소득 미입력 — 우리정보 탭에서 입력하면 정확해져요');
+      }
+    }
+  }
+  // LH 공고는 세부 공급유형(특공 물량 등)을 API로 못 받아서 '조건 확인'까지만
+  if (n.source === 'LH청약플러스' && !(n.models || []).length && n.kind !== '신혼희망타운') {
+    for (const r of routes) if (r.status === 'ok') { r.status = 'check'; r.reasons.push('LH 공고 — 특별공급 종류·물량은 공고문에서 확인'); }
+  }
 
   const best = routes.reduce((a, r) => (RANK[r.status] > RANK[a] ? r.status : a), 'no');
   const lvlScore = lvl === 'local' ? 40 : near ? 30 : { sido: 20, metro: 10, out: 0 }[lvl];

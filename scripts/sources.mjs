@@ -162,6 +162,7 @@ async function fetchModels(key, n, op) {
 function lhKind(x) {
   const t = `${pick(x, 'AIS_TP_CD_NM')} ${pick(x, 'UPP_AIS_TP_NM')} ${pick(x, 'PAN_NM')}`;
   if (/영구임대/.test(t)) return null; // 수급자 대상
+  if (/매각|무순위|잔여세대|미분양|선착순/.test(t)) return '무순위';
   if (/신혼희망/.test(t)) return '신혼희망타운';
   if (/행복주택/.test(t)) return '행복주택';
   if (/국민임대/.test(t)) return '국민임대';

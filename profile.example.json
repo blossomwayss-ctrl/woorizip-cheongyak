@@ -1,28 +1,77 @@
 {
   "_설명": "이 파일은 예시입니다. 실제 값은 GitHub Secret 'PROFILE_JSON'에만 넣으세요 (저장소에 올리지 마세요). 앱의 '우리 정보' 탭에서 입력하고 [JSON 복사]를 눌러 붙여넣으면 됩니다.",
-  "region": { "sido": "경기", "sigungu": "광명시", "movedInAt": "2024-01-01" },
-  "marriage": { "weddingDate": "2026-08-01", "registered": false, "registeredDate": null, "planned": true },
-  "household": { "sameHousehold": true },
+  "region": {
+    "sido": "경기",
+    "sigungu": "광명시",
+    "movedInAt": "2024-01-01"
+  },
+  "marriage": {
+    "weddingDate": "2026-08-01",
+    "registered": false,
+    "registeredDate": null,
+    "planned": true
+  },
+  "household": {
+    "sameHousehold": true
+  },
   "homeless": true,
   "children": [],
-  "assets": { "realEstate": 0, "car": 0 },
+  "assets": {
+    "realEstate": 0,
+    "car": 0
+  },
   "members": [
     {
-      "key": "a", "label": "남편", "birth": "1990-01-01", "isHead": true,
-      "account": { "openedAt": "2015-01-01", "payments": 120, "balance": 6000000 },
-      "monthlyIncome": 3500000, "taxYears": 8,
-      "ownsHome": false, "everOwnedHome": false, "winWithin5y": false, "parentsDependents": 0
+      "key": "a",
+      "label": "남편",
+      "birth": "1990-01-01",
+      "isHead": true,
+      "account": {
+        "openedAt": "2015-01-01",
+        "payments": 120,
+        "balance": 6000000
+      },
+      "monthlyIncome": 3500000,
+      "taxYears": 8,
+      "ownsHome": false,
+      "everOwnedHome": false,
+      "winWithin5y": false,
+      "parentsDependents": 0
     },
     {
-      "key": "b", "label": "아내", "birth": "1992-01-01", "isHead": false,
-      "account": { "openedAt": "2018-01-01", "payments": 60, "balance": 3000000 },
-      "monthlyIncome": 3000000, "taxYears": 5,
-      "ownsHome": false, "everOwnedHome": false, "winWithin5y": false, "parentsDependents": 0
+      "key": "b",
+      "label": "아내",
+      "birth": "1992-01-01",
+      "isHead": false,
+      "account": {
+        "openedAt": "2018-01-01",
+        "payments": 60,
+        "balance": 3000000
+      },
+      "monthlyIncome": 3000000,
+      "taxYears": 5,
+      "ownsHome": false,
+      "everOwnedHome": false,
+      "winWithin5y": false,
+      "parentsDependents": 0
     }
   ],
   "prefs": {
-    "regions": ["서울", "경기", "인천"],
-    "nearby": ["광명", "시흥", "부천", "안양", "금천구", "구로구", "과천"],
+    "areas": [
+      "광명",
+      "부천",
+      "독산",
+      "신림",
+      "구로",
+      "동작",
+      "영등포",
+      "양천"
+    ],
+    "nearby": [
+      "철산",
+      "하안",
+      "소하"
+    ],
     "maxPriceManwon": 0
   }
 }

@@ -1,7 +1,7 @@
-import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES } from './engine.js';
+import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES, AREAS, HOME_DEFAULT } from './engine.js';
 
 const LS = { key: 'wz.key.v1', prof: 'wz.profileOverride', checks: 'wz.checks', sim: 'wz.simulate' };
-const S = { box: null, bundle: null, tab: 'home', filter: 'all', showNo: false, sim: localStorage.getItem(LS.sim) === '1', evals: new Map(), d: null, installEvt: null };
+const S = { box: null, bundle: null, tab: 'home', filter: 'all', area: 'all', mapShow: { ok: true, check: true, after: true, no: false }, map: null, showNo: false, sim: localStorage.getItem(LS.sim) === '1', evals: new Map(), d: null, installEvt: null };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STATUS = { ok: '가능성 높음', check: '조건 확인', after: '혼인신고 후', no: '불가' };
@@ -77,6 +77,11 @@ function recompute() {
   S.evals = new Map(S.bundle.notices.map((n) => [n.id, evaluate(n, S.d)]));
 }
 const E = (n) => S.evals.get(n.id);
+// 이 휴대폰에서 고른 관심 지역만 (서버 수집 범위 안에서)
+function notices() {
+  const keys = profile().prefs?.areas;
+  return keys?.length ? S.bundle.notices.filter((n) => n.area === '광역' || keys.includes(n.area)) : S.bundle.notices;
+}
 
 // ───────── 날짜 ─────────
 function fmtD(s, withWd = true) {
@@ -118,9 +123,11 @@ function render() {
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === S.tab));
   $('#banner').innerHTML = banners();
   const v = $('#view');
-  v.innerHTML = { home: viewHome, all: viewAll, cal: viewCal, docs: viewDocs, me: viewMe }[S.tab]();
+  if (S.map) { S.map.remove(); S.map = null; }
+  v.innerHTML = { home: viewHome, map: viewMap, all: viewAll, cal: viewCal, docs: viewDocs, me: viewMe }[S.tab]();
   window.scrollTo({ top: 0 });
   bindView();
+  if (S.tab === 'map') initMap();
 }
 
 function banners() {
@@ -154,6 +161,7 @@ function card(n) {
     <div class="card-top">
       <span class="badge-best ${e.best}">${STATUS[e.best]}</span>
       <span class="tag">${esc(n.kind)}</span>
+      ${n.area ? `<span class="area-tag">📍${esc(n.area)}</span>` : ''}
       ${n.isNew ? '<span class="new-dot">NEW</span>' : ''}
       ${e.overBudget ? '<span class="tag">예산 초과</span>' : ''}
       ${dd ? `<span class="dday ${/D-[0-3]$|DAY/.test(dd) ? 'soon' : ''}">${dd}</span>` : ''}
@@ -177,7 +185,7 @@ function section(title, list, empty) {
 }
 
 function viewHome() {
-  const N = S.bundle.notices;
+  const N = notices();
   const by = (s) => N.filter((n) => E(n).best === s);
   const ok = by('ok'), check = by('check'), after = by('after');
   return `<div class="summary">
@@ -200,18 +208,25 @@ const GROUPS = {
 };
 function viewAll() {
   const [, fn] = GROUPS[S.filter];
-  const list = S.bundle.notices.filter(fn).filter((n) => S.showNo || E(n).best !== 'no');
-  const hidden = S.bundle.notices.filter(fn).filter((n) => E(n).best === 'no').length;
+  const inArea = (n) => S.area === 'all' || n.area === S.area;
+  const base = notices().filter(fn).filter(inArea);
+  const list = base.filter((n) => S.showNo || E(n).best !== 'no');
+  const hidden = base.filter((n) => E(n).best === 'no').length;
+  const areaKeys = [...new Set(notices().map((n) => n.area).filter(Boolean))];
+  const order = [...AREAS.map((a) => a.key), '광역'];
+  areaKeys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const cnt = (k) => notices().filter((n) => n.area === k && E(n).best !== 'no').length;
   return `<div class="filters">${Object.entries(GROUPS).map(([k, [lb]]) => `<button data-filter="${k}" class="${S.filter === k ? 'on' : ''}">${lb}</button>`).join('')}</div>
+    <div class="filters sub"><button data-area="all" class="${S.area === 'all' ? 'on' : ''}">📍 모든 동네</button>${areaKeys.map((k) => `<button data-area="${esc(k)}" class="${S.area === k ? 'on' : ''}">${esc(k)} ${cnt(k)}</button>`).join('')}</div>
     ${section(`${GROUPS[S.filter][0]} 공고`, list, '해당하는 공고가 없어요.')}
     ${hidden ? `<p class="note"><a href="#" data-showno>${S.showNo ? '불가 공고 숨기기' : `자격 안 되는 공고 ${hidden}건도 보기`}</a></p>` : ''}
-    <p class="note">수집 지역: ${esc((S.bundle.regions || []).join(', '))} · 출처: 청약홈, LH청약플러스</p>`;
+    <p class="note">관심 지역: ${esc((S.bundle.areas || []).join(', '))} (+서울·경기 광역 매입·전세임대) · 출처: 청약홈, LH청약플러스</p>`;
 }
 
 function calEvents(onlyFuture = true) {
   const t = todayKST();
   const ev = [];
-  for (const n of S.bundle.notices) {
+  for (const n of notices()) {
     if (!['ok', 'check'].includes(E(n).best)) continue;
     for (const k of keyDates(n)) {
       const d = toDate(k.date);
@@ -241,7 +256,7 @@ function checklist(keys) {
     ${x.url ? `<a class="btn sm" href="${x.url}" target="_blank" rel="noopener">발급</a>` : '<span></span>'}</div>`; }).join('');
 }
 function viewDocs() {
-  const rel = S.bundle.notices.filter((n) => ['ok', 'check'].includes(E(n).best));
+  const rel = notices().filter((n) => ['ok', 'check'].includes(E(n).best));
   const keys = new Set(['cert', 'rankcert']);
   for (const n of rel) docsFor(n, E(n), S.d).forEach((k) => keys.add(k));
   const order = Object.keys(DOCS).filter((k) => keys.has(k));
@@ -313,7 +328,8 @@ function viewMe() {
           <label>최대 분양가 (만원, 0=제한없음)<input inputmode="numeric" name="maxPrice" value="${esc(p.prefs?.maxPriceManwon || 0)}" /></label>
           <label>관심 동네 (쉼표)<input name="nearby" value="${esc((p.prefs?.nearby || []).join(', '))}" /></label>
         </div>
-        <div class="inline">${['서울', '경기', '인천'].map((x) => `<label class="inline"><input type="checkbox" name="rg-${x}" ${(p.prefs?.regions || ['서울', '경기', '인천']).includes(x) ? 'checked' : ''}/> ${x}</label>`).join('')}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:4px">관심 동네 (체크 해제하면 이 휴대폰에서 바로 숨겨져요)</div>
+        <div class="inline" style="flex-wrap:wrap;gap:4px 12px">${AREAS.map((a) => `<label class="inline"><input type="checkbox" name="ar-${a.key}" ${(p.prefs?.areas || AREAS.map((x) => x.key)).includes(a.key) ? 'checked' : ''}/> ${a.key}</label>`).join('')}</div>
       </fieldset>
       <button class="btn primary wide" type="submit">이 휴대폰에 저장하고 바로 다시 판정</button>
       <button class="btn wide" type="button" data-copyjson>매일 알림에도 반영: JSON 복사 → GitHub에 붙여넣기</button>
@@ -356,7 +372,8 @@ function readForm(f) {
     ownsHome: c(`m${i}.ownsHome`), everOwnedHome: c(`m${i}.everOwned`), winWithin5y: c(`m${i}.win5`),
   }));
   p.homeless = !p.members.some((m) => m.ownsHome);
-  p.prefs = { ...(p.prefs || {}), maxPriceManwon: num(v('maxPrice')), nearby: v('nearby').split(',').map((s) => s.trim()).filter(Boolean), regions: ['서울', '경기', '인천'].filter((x) => c(`rg-${x}`)) };
+  p.prefs = { ...(p.prefs || {}), maxPriceManwon: num(v('maxPrice')), nearby: v('nearby').split(',').map((s) => s.trim()).filter(Boolean), areas: AREAS.map((a) => a.key).filter((k) => c(`ar-${k}`)) };
+  delete p.prefs.regions;
   delete p._설명;
   return p;
 }
@@ -434,6 +451,8 @@ function bindView() {
   const v = $('#view');
   document.querySelectorAll('[data-open]').forEach((el) => el.addEventListener('click', () => openSheet(el.dataset.open)));
   v.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => { S.filter = b.dataset.filter; render(); }));
+  v.querySelectorAll('[data-area]').forEach((b) => b.addEventListener('click', () => { S.area = b.dataset.area; render(); }));
+  v.querySelectorAll('[data-mapshow]').forEach((cb) => cb.addEventListener('change', () => { S.mapShow[cb.dataset.mapshow] = cb.checked; drawMarkers(); }));
   v.querySelector('[data-showno]')?.addEventListener('click', (e) => { e.preventDefault(); S.showNo = !S.showNo; render(); });
   v.querySelector('[data-ics-all]')?.addEventListener('click', () => downloadICS(calEvents(), '우리집-청약일정.ics'));
   document.querySelector('[data-goto-me]')?.addEventListener('click', (e) => { e.preventDefault(); S.tab = 'me'; render(); });
@@ -454,6 +473,100 @@ function bindView() {
   v.querySelector('[data-logout]')?.addEventListener('click', () => { localStorage.removeItem(LS.key); location.reload(); });
 }
 function setSim(on) { S.sim = on; localStorage.setItem(LS.sim, on ? '1' : '0'); recompute(); render(); }
+
+
+// ───────── 지도 ─────────
+const COLORS = { ok: '#23754f', check: '#e3a92a', after: '#b4532a', no: '#9a9a9a' };
+let leafletP = null;
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (leafletP) return leafletP;
+  leafletP = new Promise((res, rej) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='; css.crossOrigin = '';
+    document.head.appendChild(css);
+    const sc = document.createElement('script');
+    sc.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    sc.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='; sc.crossOrigin = '';
+    sc.onload = () => res(window.L); sc.onerror = () => { leafletP = null; rej(new Error('지도 불러오기 실패')); };
+    document.head.appendChild(sc);
+  });
+  return leafletP;
+}
+function mapped() { return notices().filter((n) => n.geo && n.area !== '광역'); }
+function viewMap() {
+  const list = mapped();
+  const counts = { ok: 0, check: 0, after: 0, no: 0 };
+  for (const n of list) counts[E(n).best]++;
+  const wide = notices().filter((n) => n.area === '광역' && E(n).best !== 'no');
+  const approx = list.filter((n) => n.geo.approx === 'area' || n.geo.approx === 'dong').length;
+  return `<div class="map-wrap"><div id="map" aria-label="공고 지도"></div>
+      <div class="legend">${['ok', 'check', 'after', 'no'].map((k) => `<label><input type="checkbox" data-mapshow="${k}" ${S.mapShow[k] ? 'checked' : ''}/><span class="dot ${k}"></span>${STATUS[k]} ${counts[k]}</label>`).join('')}</div>
+    </div>
+    <p class="map-note">점을 누르면 공고가 보여요. 🏠은 우리 동네${approx ? ` · 옅은 원이 있는 ${approx}건은 정확한 주소 대신 동/구 단위 대략 위치` : ''}</p>
+    ${section('지도에 있는 공고', list.filter((n) => S.mapShow[E(n).best]), '지금 관심 동네에 표시할 공고가 없어요. 새 공고가 나오면 알려드릴게요.')}
+    ${wide.length ? section('지도 밖 광역 공고 (서울·경기 매입·전세임대)', wide, '') : ''}`;
+}
+let markerLayer = null;
+async function initMap() {
+  let L;
+  try { L = await loadLeaflet(); } catch { const m = $('#map'); if (m) m.innerHTML = '<div class="empty" style="margin:16px">지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>'; return; }
+  const el = $('#map'); if (!el || S.tab !== 'map') return;
+  const home = profile().region?.home || HOME_DEFAULT;
+  S.map = L.map(el, { zoomControl: true, attributionControl: true }).setView([home.lat, home.lng], 12);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(S.map);
+  L.marker([home.lat, home.lng], { icon: L.divIcon({ className: '', html: '<div class="home-pin">🏠</div>', iconSize: [24, 24], iconAnchor: [12, 20] }), zIndexOffset: 1000 })
+    .addTo(S.map).bindPopup(`<b>${esc(home.label || '우리 동네')}</b>`);
+  markerLayer = L.layerGroup().addTo(S.map);
+  drawMarkers(true);
+  S.map.on('popupopen', (e) => {
+    e.popup.getElement()?.querySelectorAll('[data-pop-open]').forEach((b) => b.addEventListener('click', () => openSheet(b.dataset.popOpen)));
+  });
+}
+function drawMarkers(fit = false) {
+  if (!S.map || !markerLayer) return;
+  const L = window.L;
+  markerLayer.clearLayers();
+  const RANK = { ok: 4, check: 3, after: 2, no: 1 };
+  const groups = new Map();
+  for (const n of mapped()) {
+    if (!S.mapShow[E(n).best]) continue;
+    const k = `${n.geo.lat.toFixed(4)},${n.geo.lng.toFixed(4)}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(n);
+  }
+  const pts = [];
+  for (const list of groups.values()) {
+    list.sort((a, b) => RANK[E(b).best] - RANK[E(a).best]);
+    const top = E(list[0]).best;
+    const g = list[0].geo;
+    const approx = g.approx === 'area' || g.approx === 'dong';
+    if (approx) {
+      // 정확한 주소 좌표가 없으면 "이 근처" 범위를 옅게 표시
+      L.circle([g.lat, g.lng], { radius: g.approx === 'dong' ? 450 : 1100, stroke: false, fillColor: COLORS[top], fillOpacity: 0.16, interactive: false }).addTo(markerLayer);
+    }
+    const m = L.circleMarker([g.lat, g.lng], {
+      radius: list.length > 1 ? 13 : 10, color: '#fff', weight: 3, fillColor: COLORS[top], fillOpacity: 0.95,
+    });
+    if (list.length > 1) m.bindTooltip(String(list.length), { permanent: true, direction: 'center', className: 'cnt-tip' });
+    m.bindPopup(list.map((n) => {
+      const e = E(n), dd = dday(n);
+      return `<div class="pop-item"><span class="chip ${e.best}">${ICON[e.best]} ${STATUS[e.best]}</span> <span class="tag">${esc(n.kind)}</span>${dd ? ` <b style="display:inline;color:var(--green)">${dd}</b>` : ''}
+        <b>${esc(n.name)}</b><div class="muted">${esc(n.address || '')}${approx ? ' (대략 위치)' : ''}</div>
+        <button class="btn sm primary" data-pop-open="${esc(n.id)}">자세히 보기</button></div>`;
+    }).join(''), { maxWidth: 260, autoPanPaddingTopLeft: [56, 24], autoPanPaddingBottomRight: [16, 24] });
+    m.addTo(markerLayer);
+    pts.push([g.lat, g.lng]);
+  }
+  if (fit) {
+    const home = profile().region?.home || HOME_DEFAULT;
+    const all = [...pts, [home.lat, home.lng]];
+    if (all.length > 1) S.map.fitBounds(all, { padding: [36, 36], maxZoom: 14 });
+  }
+}
 
 document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
 $('#refreshBtn').addEventListener('click', async () => {

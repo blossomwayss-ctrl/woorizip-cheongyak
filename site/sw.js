@@ -1,5 +1,5 @@
 // 오프라인에서도 앱이 열리도록 화면 파일을 저장하고, 공고 데이터는 항상 최신을 먼저 받아옵니다.
-const CACHE = 'woorizip-v1';
+const CACHE = 'woorizip-v2';
 const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

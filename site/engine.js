@@ -68,9 +68,40 @@ export const BLANK_PROFILE = {
   members: [{ key: 'a', label: '남편', account: {} }, { key: 'b', label: '아내', account: {} }], prefs: {},
 };
 
-// 공고가 관심 지역에 속하는지: 맞으면 지역 key, 서울/경기 광역 임대면 '광역', 아니면 null
-export function matchArea(n, areaKeys) {
-  const list = areaKeys?.length ? AREAS.filter((a) => areaKeys.includes(a.key)) : AREAS;
+// ───────────────────────── 관심 동네 지정 ─────────────────────────
+// 위 AREAS의 이름('광명')이나 자유 입력('서울 관악구 신림동', '경기 수원시 영통구', '관악구')을 받아서
+// { key, sido, sigungu, dong?, lh, center? } 로 바꿈. center가 없으면 매일 실행 때 좌표를 찾아 채움.
+const SEOUL_GU = ['종로구', '중구', '용산구', '성동구', '광진구', '동대문구', '중랑구', '성북구', '강북구', '도봉구', '노원구', '은평구', '서대문구', '마포구', '양천구', '강서구', '구로구', '금천구', '영등포구', '동작구', '관악구', '서초구', '강남구', '송파구', '강동구'];
+const SIDO_WORDS = /^(서울|서울시|서울특별시|경기|경기도|인천|인천시|인천광역시|부산|부산시|부산광역시|대구|대구시|대구광역시|광주광역시|대전|대전시|대전광역시|울산|울산시|울산광역시|세종|세종시|세종특별자치시|강원|강원도|강원특별자치도|충북|충청북도|충남|충청남도|전북|전라북도|전북특별자치도|전남|전라남도|경북|경상북도|경남|경상남도|제주|제주도|제주특별자치도)$/;
+export function parseAreaSpec(spec) {
+  if (spec && typeof spec === 'object') return { lh: [], ...spec, dong: spec.dong ? [].concat(spec.dong) : undefined };
+  const str = String(spec || '').trim();
+  if (!str) return null;
+  const builtin = AREAS.find((a) => a.key === str);
+  if (builtin) return builtin;
+  let parts = str.split(/\s+/);
+  let sido = '';
+  if (SIDO_WORDS.test(parts[0])) { sido = normSido(parts[0]); parts = parts.slice(1); }
+  if (!parts.length) return null;
+  let sigungu = parts[0];
+  if (!/(시|군|구)$/.test(sigungu)) {
+    if (SEOUL_GU.includes(`${sigungu}구`) && (!sido || sido === '서울')) sigungu += '구';
+    else sigungu += sido === '서울' ? '구' : '시';
+  }
+  if (!sido) sido = SEOUL_GU.includes(sigungu) ? '서울' : '경기';
+  const sub = parts.slice(1).join(' ');
+  const word = (sub || sigungu).replace(/(특별자치시|시|군|구|동|읍|면)$/, '') || sub || sigungu;
+  return { key: word, sido, sigungu, dong: sub ? [word] : undefined, lh: [word], spec: str };
+}
+export function resolveAreas(specs) {
+  const list = (Array.isArray(specs) ? specs : String(specs || '').split(/[,\n]/)).map(parseAreaSpec).filter(Boolean);
+  const seen = new Set();
+  return list.filter((a) => (seen.has(a.key) ? false : seen.add(a.key)));
+}
+
+// 공고가 관심 지역에 속하는지: 맞으면 지역 key, 같은 시·도의 광역 매입·전세임대면 '광역', 아니면 null
+export function matchArea(n, areas) {
+  const list = areas?.length ? areas : AREAS;
   const addr = `${n.address || ''}`;
   if (n.sigungu) {
     for (const a of list) {
@@ -82,9 +113,9 @@ export function matchArea(n, areaKeys) {
   }
   // 시·도만 있는 공고(LH 등): 공고 이름에서 지역 단어 찾기
   const text = `${n.name || ''} ${addr}`;
-  for (const a of list) if (a.lh.some((w) => text.includes(w))) return a.key;
+  for (const a of list) if ((a.lh || []).some((w) => text.includes(w))) return a.key;
   const sidos = [...new Set(list.map((a) => a.sido))];
-  const other = OTHER_DISTRICTS.filter((w) => !list.some((a) => a.lh.includes(w)));
+  const other = OTHER_DISTRICTS.filter((w) => !list.some((a) => (a.lh || []).includes(w)));
   if (sidos.includes(n.sido) && ['매입임대', '전세임대'].includes(n.kind) && !other.some((w) => text.includes(w))) return '광역';
   return null;
 }

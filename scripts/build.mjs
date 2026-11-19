@@ -3,8 +3,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluate, deriveProfile, toDate, ymd, todayKST, matchArea, AREAS, DONG_CENTERS, BLANK_PROFILE } from '../site/engine.js';
-import { geocodeAll } from './geocode.mjs';
+import { evaluate, deriveProfile, toDate, ymd, todayKST, matchArea, resolveAreas, AREAS, DONG_CENTERS, BLANK_PROFILE } from '../site/engine.js';
+import { geocodeAll, geocodeAreas, geocodeHome } from './geocode.mjs';
 import { fetchApplyhome, fetchLH } from './sources.mjs';
 import { encryptJSON, decryptJSON } from './crypto.mjs';
 
@@ -50,14 +50,16 @@ if (MOCK) {
 }
 
 // ── 2. 지역·기간 필터 ──
-const areaKeys = profile.prefs?.areas?.length ? profile.prefs.areas : AREAS.map((a) => a.key);
+// 관심 동네: ① PROFILE_JSON의 prefs.areas → ② AREAS 시크릿(쉼표 구분) → ③ 기본 목록
+const areaList = resolveAreas(profile.prefs?.areas?.length ? profile.prefs.areas : (env.AREAS ? env.AREAS : AREAS.map((a) => a.key)));
+const areaKeys = areaList.map((a) => a.key);
 const lastDate = (n) => {
   const ds = Object.entries(n.dates || {}).filter(([k]) => k !== 'moveIn').map(([, v]) => toDate(v)).filter(Boolean);
   return ds.length ? new Date(Math.max(...ds)) : null;
 };
 const before = notices.length;
 notices = notices.filter((n) => {
-  n.area = matchArea(n, areaKeys);
+  n.area = matchArea(n, areaList);
   if (!n.area) return false;
   const last = lastDate(n);
   if (!last) return true;
@@ -67,7 +69,7 @@ notices = notices.filter((n) => {
 // 중복 제거
 const seenIds = new Set();
 notices = notices.filter((n) => (seenIds.has(n.id) ? false : seenIds.add(n.id)));
-log(`  관심지역(${areaKeys.join('·')})·기간 필터: ${before} → ${notices.length}건`);
+log(`  관심 동네 ${areaList.length}곳·기간 필터: ${before} → ${notices.length}건`); // 공개 로그라 동네 이름은 찍지 않음
 
 // ── 3. 주택형(평형·분양가·특공 물량) 상세 ──
 if (modelFetcher) {
@@ -93,8 +95,14 @@ const state = (await (async () => {
 state.geo = state.geo || {};
 
 // ── 3b. 지도 좌표 ──
-if (!MOCK) await geocodeAll(notices, state.geo, log);
-else for (const n of notices) { const a = AREAS.find((x) => x.key === n.area); const dong = Object.entries(DONG_CENTERS).find(([k]) => (n.address || '').includes(k)); if (dong) n.geo = { lat: dong[1][0], lng: dong[1][1], approx: 'dong' }; else if (a && n.area !== '광역') n.geo = { lat: a.center[0], lng: a.center[1], approx: 'area' }; }
+if (!MOCK) {
+  await geocodeAreas(areaList, state.geo, log);
+  await geocodeAll(notices, areaList, state.geo, log);
+  const home = await geocodeHome(profile.region, state.geo);
+  if (home) profile = { ...profile, region: { ...profile.region, home } };
+} else {
+  for (const n of notices) { const a = areaList.find((x) => x.key === n.area); const dong = Object.entries(DONG_CENTERS).find(([k]) => (n.address || '').includes(k)); if (dong) n.geo = { lat: dong[1][0], lng: dong[1][1], approx: 'dong' }; else if (a?.center && n.area !== '광역') n.geo = { lat: a.center[0], lng: a.center[1], approx: 'area' }; }
+}
 
 // ── 4. 판정 ──
 const d = deriveProfile(profile);
@@ -166,7 +174,7 @@ await notify(message);
 // ── 6. 앱 데이터 암호화 + dist 생성 ──
 const bundle = {
   generatedAt: new Date().toISOString(),
-  profile, profileMissing, areas: areaKeys,
+  profile, profileMissing, areas: areaKeys, areaSpecs: areaList.map((a) => a.spec || a.key), areaCenters: Object.fromEntries(areaList.filter((a) => a.center).map((a) => [a.key, a.center])),
   notices: notices.map((n) => ({ ...n, firstSeen: state.seen[n.id], isNew: !!fresh.find((f) => f.id === n.id) })),
   sourceStatus, fieldSample,
   repo: env.GITHUB_REPOSITORY || '',

@@ -38,6 +38,7 @@ jobs:
           PROFILE_JSON: ${{ secrets.PROFILE_JSON }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           APP_SALT: ${{ secrets.APP_SALT }}
+          AREAS: ${{ secrets.AREAS }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

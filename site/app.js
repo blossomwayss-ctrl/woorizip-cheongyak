@@ -1,4 +1,4 @@
-import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES, AREAS, homeOf } from './engine.js';
+import { evaluate, deriveProfile, docsFor, DOCS, estimatePoints, toDate, ymd, todayKST, RULES, resolveAreas, homeOf } from './engine.js';
 
 const LS = { key: 'wz.key.v1', prof: 'wz.profileOverride', checks: 'wz.checks', sim: 'wz.simulate' };
 const S = { box: null, bundle: null, tab: 'home', filter: 'all', area: 'all', mapShow: { ok: true, check: true, after: true, no: false }, map: null, showNo: false, sim: localStorage.getItem(LS.sim) === '1', evals: new Map(), d: null, installEvt: null };
@@ -79,8 +79,10 @@ function recompute() {
 const E = (n) => S.evals.get(n.id);
 // 이 휴대폰에서 고른 관심 지역만 (서버 수집 범위 안에서)
 function notices() {
-  const keys = profile().prefs?.areas;
-  return keys?.length ? S.bundle.notices.filter((n) => n.area === '광역' || keys.includes(n.area)) : S.bundle.notices;
+  const specs = profile().prefs?.areas;
+  if (!specs?.length) return S.bundle.notices;
+  const keys = resolveAreas(specs).map((a) => a.key);
+  return S.bundle.notices.filter((n) => n.area === '광역' || keys.includes(n.area));
 }
 
 // ───────── 날짜 ─────────
@@ -213,7 +215,7 @@ function viewAll() {
   const list = base.filter((n) => S.showNo || E(n).best !== 'no');
   const hidden = base.filter((n) => E(n).best === 'no').length;
   const areaKeys = [...new Set(notices().map((n) => n.area).filter(Boolean))];
-  const order = [...AREAS.map((a) => a.key), '광역'];
+  const order = [...(S.bundle.areas || []), '광역'];
   areaKeys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const cnt = (k) => notices().filter((n) => n.area === k && E(n).best !== 'no').length;
   return `<div class="filters">${Object.entries(GROUPS).map(([k, [lb]]) => `<button data-filter="${k}" class="${S.filter === k ? 'on' : ''}">${lb}</button>`).join('')}</div>
@@ -329,8 +331,8 @@ function viewMe() {
           <label>최대 분양가 (만원, 0=제한없음)<input inputmode="numeric" name="maxPrice" value="${esc(p.prefs?.maxPriceManwon || 0)}" /></label>
           <label>관심 동네 (쉼표)<input name="nearby" value="${esc((p.prefs?.nearby || []).join(', '))}" /></label>
         </div>
-        <div style="font-size:13px;color:var(--muted);margin-top:4px">관심 동네 (체크 해제하면 이 휴대폰에서 바로 숨겨져요)</div>
-        <div class="inline" style="flex-wrap:wrap;gap:4px 12px">${AREAS.map((a) => `<label class="inline"><input type="checkbox" name="ar-${a.key}" ${(p.prefs?.areas || AREAS.map((x) => x.key)).includes(a.key) ? 'checked' : ''}/> ${a.key}</label>`).join('')}</div>
+        <label style="margin-top:8px">관심 동네 (쉼표로 구분 · 예: 서울 관악구 신림동, 경기 광명시, 양천구)<input name="areas" value="${esc((p.prefs?.areas?.length ? p.prefs.areas : (S.bundle.areaSpecs || [])).join(', '))}" /></label>
+        <div style="font-size:12.5px;color:var(--muted)">빼는 건 이 휴대폰에 바로 반영돼요. 새 동네를 <b>추가</b>하면 JSON 복사 → GitHub PROFILE_JSON에 넣은 뒤 다음 실행부터 공고가 들어와요.</div>
       </fieldset>
       <button class="btn primary wide" type="submit">이 휴대폰에 저장하고 바로 다시 판정</button>
       <button class="btn wide" type="button" data-copyjson>매일 알림에도 반영: JSON 복사 → GitHub에 붙여넣기</button>
@@ -373,7 +375,7 @@ function readForm(f) {
     ownsHome: c(`m${i}.ownsHome`), everOwnedHome: c(`m${i}.everOwned`), winWithin5y: c(`m${i}.win5`),
   }));
   p.homeless = !p.members.some((m) => m.ownsHome);
-  p.prefs = { ...(p.prefs || {}), maxPriceManwon: num(v('maxPrice')), nearby: v('nearby').split(',').map((s) => s.trim()).filter(Boolean), areas: AREAS.map((a) => a.key).filter((k) => c(`ar-${k}`)) };
+  p.prefs = { ...(p.prefs || {}), maxPriceManwon: num(v('maxPrice')), nearby: v('nearby').split(',').map((s) => s.trim()).filter(Boolean), areas: v('areas').split(',').map((x) => x.trim()).filter(Boolean) };
   delete p.prefs.regions;
   delete p._설명;
   return p;
@@ -515,7 +517,8 @@ async function initMap() {
   try { L = await loadLeaflet(); } catch { const m = $('#map'); if (m) m.innerHTML = '<div class="empty" style="margin:16px">지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>'; return; }
   const el = $('#map'); if (!el || S.tab !== 'map') return;
   const home = homeOf(profile());
-  const start = home ? [home.lat, home.lng] : AREAS[0].center;
+  const firstCenter = Object.values(S.bundle.areaCenters || {})[0];
+  const start = home ? [home.lat, home.lng] : firstCenter || [37.5665, 126.978];
   S.map = L.map(el, { zoomControl: true, attributionControl: true }).setView(start, 12);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
